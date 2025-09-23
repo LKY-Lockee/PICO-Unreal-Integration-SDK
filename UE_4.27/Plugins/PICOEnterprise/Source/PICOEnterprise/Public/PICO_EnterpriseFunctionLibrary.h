@@ -12,6 +12,7 @@
 #include "Android/AndroidJNI.h"
 #include "Android/AndroidApplication.h"
 #endif
+#include "CameraAPI.h"
 #include "PICO_EnterpriseFunctionLibrary.generated.h"
 
 /// @file PICO_EnterpriseFunctionLibrary.h
@@ -48,7 +49,13 @@ enum class ESystemInfoEnum :uint8
 	CAMERA_TEMPERATURE_CELSIUS,
 	//相机温度单位华氏度
 	CAMERA_TEMPERATURE_FAHRENHEIT,
-	LARGESPACE_MAP_INFO //大空间地图信息
+	LARGESPACE_MAP_INFO, //大空间地图信息
+	//充电协议
+	CURRENT_CHARGING_PROTOCOL = 20,
+	//最大充电功率
+	USB_PWOER_MAX = 21,
+	//头戴位姿
+	HMD_POSITION_AND_ORIENTATION = 22,
 };
 
 UENUM(BlueprintType)
@@ -237,7 +244,20 @@ enum class ESystemFunctionSwitchEnum :uint8
 	 */
 	SFS_REAL_TIME_RESPONSE_HMD_BACK_KEY_IN_VR_APP,
 	//优先使用Marker点找回地图
-	SFS_RETRIEVE_MAP_BY_MARKER_FIRST
+	SFS_RETRIEVE_MAP_BY_MARKER_FIRST,
+
+	//手柄是否进入静止状态
+    //不支持pbsGetSwitchSystemFunctionStatus接口
+    SFS_CONTROLLER_STILL= 92,
+    
+    //快捷设置是否显示性能按钮 Sparrow_PUI513
+    SFS_SHORTCUT_SHOW_PERFORMANCE_UI= 93,
+    
+    //电池状态显示
+    SFS_BATTERY_STATUS_DISPLAY= 94,
+    
+    //快速重定位
+    SFS_QUICK_RELOCATION= 95,
 };
 
 UENUM(BlueprintType)
@@ -376,7 +396,35 @@ enum class ECustomizeSettingsTab : uint8
 	CUSTOMIZE_SETTINGS_TAB_DISPLAY = 3,
 	CUSTOMIZE_SETTINGS_TAB_LAB = 4,
 	CUSTOMIZE_SETTINGS_TAB_GENERAL_LOCKSCREEN = 5,
-	CUSTOMIZE_SETTINGS_TAB_GENERAL_FACTORY_RESET = 6
+	CUSTOMIZE_SETTINGS_TAB_GENERAL_FACTORY_RESET = 6,
+	//账号 Sparrow_PUI5130
+	CUSTOMIZE_SETTINGS_TAB_ACCOUNTS = 7,
+	//系统升级 Sparrow_PUI5130
+	CUSTOMIZE_SETTINGS_TAB_SYSTEM_UPDATE = 8,
+	//交互 Sparrow_PUI5130
+	CUSTOMIZE_SETTINGS_TAB_INTERACTION = 9,
+	//瞳距 Sparrow_PUI5130
+	CUSTOMIZE_SETTINGS_TAB_PUPIL_DISTANCE = 10,
+	//相机与透视 Sparrow_PUI5130
+	CUSTOMIZE_SETTINGS_TAB_CAMERA_SEETHROUGH = 11,
+	//虚拟场景 Sparrow_PUI5130
+	CUSTOMIZE_SETTINGS_TAB_VIRTUAL_ENVIRONMENT = 12,
+	//安全防护 Sparrow_PUI5130
+	CUSTOMIZE_SETTINGS_TAB_SAFEGUARD = 13,
+	//房间标定 Sparrow_PUI5130
+	CUSTOMIZE_SETTINGS_TAB_ROOM_CAPTURE = 14,
+	//性能 Sparrow_PUI5130
+	CUSTOMIZE_SETTINGS_TAB_PERFORMANCE = 15,
+	//控制中心 Sparrow_PUI5130
+	CUSTOMIZE_SETTINGS_TAB_CONTROL_CENTRE = 16,
+	//通知 Sparrow_PUI5130
+	CUSTOMIZE_SETTINGS_TAB_NOTIFICATIONS = 17,
+	//应用管理 Sparrow_PUI5130
+	CUSTOMIZE_SETTINGS_TAB_APP_MANAGEMENT = 18,
+	//关于本机 Sparrow_PUI5130
+	CUSTOMIZE_SETTINGS_TAB_ABOUT = 19,
+	//帮助与反馈 Sparrow_PUI5130
+	CUSTOMIZE_SETTINGS_TAB_HELP_FEEDBACK = 20
 };
 
 UENUM(BlueprintType)
@@ -716,6 +764,7 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FPICOEnterpriseStringDelegate, FString, Result
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(FPICOOnUpdateStatusChangedDelegate, int32, StatusCode, float, Percent);
 DECLARE_DYNAMIC_DELEGATE_TwoParams(FPICOOnUpdateCompleteDelegate, int32, ErrorCode, FString, ErrorMsg);
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(FPICOEnterpriseCameraBufferDelegate, int32, Status, const TArray<uint8>&, Buffer, int64, Time);
 
 /// @endcond
 
@@ -3725,7 +3774,78 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "PICO|Enterprise")
 	static void PE_UpdateRenderTargetFromRGB(const TArray<uint8>& RawData, int32 Width, int32 Height, UTextureRenderTarget2D* RenderTarget2D, uint8 OverrideAlpha = 255);
+
+	UFUNCTION(BlueprintCallable, Category = "PICO|Enterprise")
+	static void PE_UpdateRenderTargetFromRGBA(const TArray<uint8>& RawData, int32 Width, int32 Height, UTextureRenderTarget2D* RenderTarget2D);
 	
 	UFUNCTION(BlueprintCallable, Category = "PICO|Enterprise")
 	static void PE_UpdateRenderTargetFromYUVNV21(const TArray<uint8>& RawData, int32 Width, int32 Height, UTextureRenderTarget2D* RenderTarget2D, uint8 OverrideAlpha = 255);
+
+	UFUNCTION(BlueprintCallable, Category = "PICO|Enterprise")
+	static bool PE_CloseCamera();
+
+	static int CameraMode;
+	static CameraFrame CameraFrameBuffer;
+	static TArray<uint8> CameraFrameBufferData;
+	static FPICOEnterpriseCameraBufferDelegate CapturelibCallBackDelegate;
+	/*
+	VALUE_TRUE = "1";
+	VALUE_FALSE = "0";
+
+	KEY_MCTF = "enable-mctf";
+	KEY_EIS = "enable-eis";
+	KEY_MFNR = "enable-mfnr";
+	KEY_ENABLE_MVHEVC = "enable-mvhevc";
+	KEY_OUTPUT_CAMERA_RAW_DATA = "output-camera-raw-data";
+	KEY_VIDEO_FPS = "video-fps";
+	*/
+	UFUNCTION(BlueprintCallable, Category = "PICO|Enterprise")
+	static bool PE_OpenCameraAsync(int Mode, int Width, int Height, const TMap<FString, FString>& Options, const FPICOEnterpriseCameraBufferDelegate& Callback);
+
+	UFUNCTION(BlueprintCallable, Category = "PICO|Enterprise")
+	static void PE_SetConfigureDefault();
+
+	UFUNCTION(BlueprintCallable, Category = "PICO|Enterprise")
+	static void PE_SetConfigure(bool enableMvHevc, int videoFps);
+
+	/*
+	VALUE_TRUE = "1";
+	VALUE_FALSE = "0";
+
+	KEY_MCTF = "enable-mctf";
+	KEY_EIS = "enable-eis";
+	KEY_MFNR = "enable-mfnr";
+	KEY_ENABLE_MVHEVC = "enable-mvhevc";
+	KEY_OUTPUT_CAMERA_RAW_DATA = "output-camera-raw-data";
+	KEY_VIDEO_FPS = "video-fps";
+	*/
+	UFUNCTION(BlueprintCallable, Category = "PICO|Enterprise")
+	static void PE_SetConfigureMap(const TMap<FString, FString>& Options);
+
+	UFUNCTION(BlueprintCallable, Category = "PICO|Enterprise")
+	static bool PE_GetCameraExtrinsics(TArray<float>& leftCameraExtrinsics, TArray<float>& rightCameraExtrinsics);
+
+	UFUNCTION(BlueprintCallable, Category = "PICO|Enterprise")
+	static bool PE_GetCameraIntrinsics(int width, int height, float h_fov, float v_fov, TArray<float>& rateArray);
+
+	UFUNCTION(BlueprintCallable, Category = "PICO|Enterprise")
+	static int PE_SetDeviceOwner(FString PackageName, FString ClassName);
+
+	UFUNCTION(BlueprintCallable, Category = "PICO|Enterprise")
+	static FString PE_GetDeviceOwner();
+
+	UFUNCTION(BlueprintCallable, Category = "PICO|Enterprise")
+	static int PE_SetBrowserHomePage(FString url);
+
+	UFUNCTION(BlueprintCallable, Category = "PICO|Enterprise")
+	static FString PE_GetBrowserHomePage();
+
+	UFUNCTION(BlueprintCallable, Category = "PICO|Enterprise")
+	static FString PE_SetMotionTrackerAutoStart(int enable);
+
+	UFUNCTION(BlueprintCallable, Category = "PICO|Enterprise")
+	static int PE_AllowWifiAutoJoin(FString ssid, FString password, int networkID, bool allowAutoJoin);
+	
+	UFUNCTION(BlueprintCallable, Category = "PICO|Enterprise")
+	static TArray<FString> PE_GetLargeSpaceBoundsInfoWithType();
 };

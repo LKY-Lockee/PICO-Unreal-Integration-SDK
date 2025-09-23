@@ -8,6 +8,6 @@
 		"PICOXRInput": "UnrealEditor-PICOXRInput.dll",
 		"PICOXRMR": "UnrealEditor-PICOXRMR.dll",
 		"PICOXRMotionTracking": "UnrealEditor-PICOXRMotionTracking.dll",
-		"PICOXRProjectVerification": "UnrealEditor-PICOXRProjectVerification.dll"
+		"PICOXRPortal": "UnrealEditor-PICOXRPortal.dll"
 	}
 }

@@ -120,8 +120,13 @@ private:
         static const FString Curtain("Curtain");
         static const FString Cabinet("Cabinet");
         static const FString Bed("Bed");
+        static const FString Plant("Plant");
         static const FString Screen("Screen");
         static const FString VirtualWall("VirtualWall");
+        static const FString Refrigerator("Refrigerator");
+        static const FString Air_Conditioner("Air_Conditioner");
+        static const FString Lamp("Lamp");
+        static const FString Wall_Art("Wall_Art");
         static const FString Stairway("Stairway");
 
         // Switch case to map the enum value to the corresponding string.
@@ -141,6 +146,11 @@ private:
             case EPICOSemanticLabel::Curtain: return Curtain;
             case EPICOSemanticLabel::Cabinet: return Cabinet;
             case EPICOSemanticLabel::Bed: return Bed;
+            case EPICOSemanticLabel::Plant: return Plant;
+            case EPICOSemanticLabel::Refrigerator: return Refrigerator;
+            case EPICOSemanticLabel::Air_Conditioner: return Air_Conditioner;
+            case EPICOSemanticLabel::Lamp: return Lamp;
+            case EPICOSemanticLabel::Wall_Art: return Wall_Art;
             case EPICOSemanticLabel::Screen: return Screen;
             case EPICOSemanticLabel::VirtualWall: return VirtualWall;
             case EPICOSemanticLabel::Stairway: return Stairway;

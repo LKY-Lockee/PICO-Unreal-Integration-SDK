@@ -367,8 +367,14 @@ enum class EPICOSemanticLabel:uint8
 	Curtain = 13,
 	Cabinet = 14,
 	Bed =15,
+	Plant =16,
 	Screen =17,
 	VirtualWall = 18,
+	Refrigerator = 19,
+	Washing_Machine = 20,
+	Air_Conditioner = 21,
+	Lamp = 22,
+	Wall_Art = 23,
 	Stairway =24,
 	Count UMETA(Hidden)
 };
@@ -387,7 +393,14 @@ ENUM_RANGE_BY_VALUES(EPICOSemanticLabel,
 	EPICOSemanticLabel::Curtain,
 	EPICOSemanticLabel::Cabinet,
 	EPICOSemanticLabel::Bed,
+	EPICOSemanticLabel::Plant,
 	EPICOSemanticLabel::Screen,
+	EPICOSemanticLabel::VirtualWall,
+	EPICOSemanticLabel::Refrigerator,
+	EPICOSemanticLabel::Washing_Machine,
+	EPICOSemanticLabel::Air_Conditioner,
+	EPICOSemanticLabel::Lamp,
+	EPICOSemanticLabel::Wall_Art,
 	EPICOSemanticLabel::Stairway);
 
 

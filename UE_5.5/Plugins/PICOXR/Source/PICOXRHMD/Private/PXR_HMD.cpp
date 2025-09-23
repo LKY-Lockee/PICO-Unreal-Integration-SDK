@@ -1361,8 +1361,8 @@ FIntPoint FPICOXRHMD::GetRenderViewportSize(const FIntPoint& RenderTargetSize) c
 void FPICOXRHMD::UpdateRenderTargetAndViewport()
 {
 	// Update pixel density from console variable
-	static const auto PixelDensityCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("vr.PixelDensity"));
-	float PixelDensityRaw = (PixelDensityCVar ? PixelDensityCVar->GetFloat() : 1.0f);
+	static const auto PixelDensityCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("xr.SecondaryScreenPercentage.HMDRenderTarget"));
+	float PixelDensityRaw = (PixelDensityCVar ? PixelDensityCVar->GetFloat() : 100.0f)/100.0f;
 
 	PXR_LOGV(PxrUnreal, "PixelDensityRaw=%f", PixelDensityRaw);
 
@@ -1544,7 +1544,7 @@ void FPICOXRHMD::UpdateFoveationOffsets_RenderThread()
 		return;
 	}
 
-	const FRHITexture2D* EyeLayerTexture = EyeLayerSwapChain->GetTexture2DArray() ? EyeLayerSwapChain->GetTexture2DArray() : EyeLayerSwapChain->GetTexture2D();
+	const FRHITexture* EyeLayerTexture = EyeLayerSwapChain->GetTexture2DArray() ? EyeLayerSwapChain->GetTexture2DArray() : EyeLayerSwapChain->GetTexture2D();
 	if (!EyeLayerTexture)
 	{
 		PXR_LOGV(PxrUnreal, "FPICOXRHMD::PostRenderBasePass_RenderThread: EyeLayerTexture is Invalid");
@@ -1984,7 +1984,7 @@ bool FPICOXRHMD::InitializeSession()
 
 	{
 		//SetAppEngineInfo2
-		FString UnrealSDKVersion = "UE5_3.2.3";
+		FString UnrealSDKVersion = "UE5_3.3.2";
 		FString UnrealVersion = FString::FromInt(ENGINE_MINOR_VERSION);
 		UnrealSDKVersion = UnrealSDKVersion + UnrealVersion;
 		PXR_LOGI(PxrUnreal, "%s,xrVersion:%s", PLATFORM_CHAR(*FEngineVersion::Current().ToString()), PLATFORM_CHAR(*UnrealSDKVersion));

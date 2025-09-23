@@ -81,32 +81,10 @@ public class PICOXRHMD : ModuleRules
 
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
-            // D3D
-            {
-                PrivateDependencyModuleNames.AddRange(
-                    new string[]
-                    {
-                            "D3D11RHI",
-                            "D3D12RHI",
-                    });
-
-                PublicIncludePaths.AddRange(
-                    new string[]
-                    {
-                            Path.Combine(EngineDir,"Source/Runtime/Windows/D3D11RHI/Private"),
-                            Path.Combine(EngineDir,"Source/Runtime/Windows/D3D11RHI/Private/Windows"),
-                            Path.Combine(EngineDir,"Source/Runtime/D3D12RHI/Private"),
-                            Path.Combine(EngineDir,"Source/Runtime/D3D12RHI/Private/Windows"),
-                    });
-
-                AddEngineThirdPartyPrivateStaticDependencies(Target, "DX11");
-                AddEngineThirdPartyPrivateStaticDependencies(Target, "DX12");
-                AddEngineThirdPartyPrivateStaticDependencies(Target, "NVAPI");
-                AddEngineThirdPartyPrivateStaticDependencies(Target, "DX11Audio");
-                AddEngineThirdPartyPrivateStaticDependencies(Target, "DirectSound");
-                AddEngineThirdPartyPrivateStaticDependencies(Target, "NVAftermath");
-                AddEngineThirdPartyPrivateStaticDependencies(Target, "IntelExtensionsFramework");
-            }
+            PublicIncludePaths.AddRange(
+                new string[] {
+                    Path.Combine(ModuleDirectory, "../ThirdParty/PXRPlugin/PXRPlugin/Include"),
+                });
         }
         else if (Target.Platform == UnrealTargetPlatform.Android)
         {

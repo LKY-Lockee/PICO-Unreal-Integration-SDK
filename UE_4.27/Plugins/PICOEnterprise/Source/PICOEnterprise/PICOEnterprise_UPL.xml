@@ -7,19 +7,28 @@ Unreal® Engine, Copyright 1998 – 2023, Epic Games, Inc. All rights reserved.
 <root xmlns:android="http://schemas.android.com/apk/res/android">
 	<init>
         <log text="PICOEnterprise init"/>
-        <log text="PICOEnterprise SDK Version = UE_3.2.3"/>
+        <log text="PICOEnterprise SDK Version = UE_3.3.2"/>
     </init>
 	
 	<androidManifestUpdates>
 		<addElements tag="application">
-			<meta-data android:name="pvr.tobsdk.version" android:value="UE_3.2.3" />
+			<meta-data android:name="pvr.tobsdk.version" android:value="UE_3.3.2" />
 			<meta-data android:name="pico_advance_interface" android:value="0"/>
 		</addElements>
+		<addPermission android:name="android.permission.CAMERA"/>
 	</androidManifestUpdates>
 
 	<resourceCopies>
 		<copyFile src="$S(PluginDir)/../../Libs/BAuthLib-1.0.0.jar"
 				  dst="$S(BuildDir)/libs/BAuthLib-1.0.0.jar" />
+		<copyFile src="$S(PluginDir)/../../Libs/CameraRenderingPlugin.jar"
+				  dst="$S(BuildDir)/libs/CameraRenderingPlugin.jar" />
+		<copyFile src="$S(PluginDir)/../../Libs/capturelib-0.0.7.jar"
+				  dst="$S(BuildDir)/libs/capturelib-0.0.7.jar" />
+		<copyFile src="$S(PluginDir)/../../Libs/arm64-v8a/libCameraRenderingPlugin.so"
+				  dst="$S(BuildDir)/libs/arm64-v8a/libCameraRenderingPlugin.so" />
+		<copyFile src="$S(PluginDir)/../../Libs/arm64-v8a/libpvrcapturelib.so"
+				  dst="$S(BuildDir)/libs/arm64-v8a/libpvrcapturelib.so" />
 	</resourceCopies>
 	
 	<buildGradleAdditions>
@@ -50,7 +59,7 @@ allprojects {
 }
 
 dependencies {
-	implementation 'com.picoxr.tobservice:tobservicelib:4.3.18'
+	implementation 'com.picoxr.tobservice:tobservicelib:4.3.20'
 	implementation 'com.google.code.gson:gson:2.8.6'
 }
 		</insert>
@@ -77,6 +86,7 @@ import com.pvr.tobservice.model.PicoCastMediaFormat;
 import com.pvr.tobservice.model.MarkerInfo;
 import com.pvr.tobservice.model.MarkerInfoF;
 import com.pvr.tobservice.model.OffLineSystemUpdateConfig;
+import com.pvr.tobservice.model.LargeSpaceBoundsInfo;
 import com.pvr.tobservice.enums.PBS_DeviceControlEnum;
 import com.pvr.tobservice.enums.PBS_HomeEventEnum;
 import com.pvr.tobservice.enums.PBS_HomeFunctionEnum;
@@ -4057,6 +4067,119 @@ String[] SetStaticIpConfiguration(String ssid, String password, String StaticIP,
 		R[0] = "None";
 		R[1] = "None";
 		return R;
+}
+
+int SetDeviceOwner(String PackageName, String ClassName)
+{
+	IToBServiceProxy binder = (IToBServiceProxy)ToBServiceHelper.getInstance().getServiceBinder();
+	if (binder != null)
+	{		
+		ComponentName componentName = new ComponentName(PackageName, ClassName);
+		return binder.setDeviceOwner(componentName);
+	}
+	return Integer.MAX_VALUE;
+}
+
+String GetDeviceOwner()
+{
+	IToBServiceProxy binder = (IToBServiceProxy)ToBServiceHelper.getInstance().getServiceBinder();
+	if (binder != null)
+	{		
+		ComponentName name = binder.getDeviceOwner();
+		if(name != null)
+		{
+			return name.toString();
+		}
+	}
+	return "";
+}
+
+int SetBrowserHomePage(String url)
+{
+	IToBServiceProxy binder = (IToBServiceProxy)ToBServiceHelper.getInstance().getServiceBinder();
+	if (binder != null)
+	{		
+		return binder.setBrowserHomePage(url);
+	}
+	return Integer.MAX_VALUE;
+}
+
+String GetBrowserHomePage()
+{
+	IToBServiceProxy binder = (IToBServiceProxy)ToBServiceHelper.getInstance().getServiceBinder();
+	if (binder != null)
+	{		
+		return binder.getBrowserHomePage();
+	}
+	return "";
+}
+
+String SetMotionTrackerAutoStart(int enable)
+{
+	IToBServiceProxy binder = (IToBServiceProxy)ToBServiceHelper.getInstance().getServiceBinder();
+	if (binder != null)
+	{		
+		return binder.setMotionTrackerAutoStart(enable);
+	}
+	return "";
+}
+
+int AllowWifiAutoJoin(String ssid, String password, int networkID, boolean allowAutoJoin)
+{		
+	IToBServiceProxy binder = (IToBServiceProxy)ToBServiceHelper.getInstance().getServiceBinder();
+	if (binder != null)
+	{	
+		WifiConfiguration config = new WifiConfiguration();
+		if (password.isEmpty()) 
+		{
+			config.SSID = "\"" + ssid + "\"";
+			config.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE);
+		}
+		else
+		{
+			config.allowedAuthAlgorithms.clear();
+			config.allowedGroupCiphers.clear();
+			config.allowedKeyManagement.clear();
+			config.allowedPairwiseCiphers.clear();
+			config.allowedProtocols.clear();
+			config.SSID = "\"" + ssid + "\"";
+			config.preSharedKey = "\"" + password + "\"";
+			config.hiddenSSID = true;
+			config.allowedAuthAlgorithms.set(WifiConfiguration.AuthAlgorithm.OPEN);
+			config.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.TKIP);
+			config.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK);
+			config.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.TKIP);
+			config.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.CCMP);
+			config.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.CCMP);
+			config.status = WifiConfiguration.Status.ENABLED;
+		}
+		
+		if (ssid.isEmpty()) 
+		{
+			return binder.allowWifiAutoJoin(null, networkID, allowAutoJoin);
+		}
+		else
+		{
+			return binder.allowWifiAutoJoin(config, networkID, allowAutoJoin);
+		}
+	}
+	return Integer.MAX_VALUE;
+}
+
+String[] GetLargeSpaceBoundsInfoWithType()
+{
+	IToBServiceProxy binder = (IToBServiceProxy)ToBServiceHelper.getInstance().getServiceBinder();
+	if (binder != null)
+	{		
+		LargeSpaceBoundsInfo[] temps = binder.getLargeSpaceBoundsInfoWithType();
+		String[] results = new String[temps.length];
+		for (int i = 0; i &lt; temps.length; i++) 
+		{
+			results[i] = temps[i].toString();
+        }
+		return results;
+	}
+	return null;
 }
 
 		</insert>

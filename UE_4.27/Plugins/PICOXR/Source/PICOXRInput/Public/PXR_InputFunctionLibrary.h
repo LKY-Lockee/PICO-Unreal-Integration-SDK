@@ -568,13 +568,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PXR|PXRInput")
 	static int PXR_GetHandedness(EPICOXRHandedness& Handedness);
 
-	/**
-	* Get controllers' enable homeKey.
-	* @return True if home key enable.
-	*/
-	UFUNCTION(BlueprintCallable, Category = "PXR|PXRInput")
-	static bool PXR_GetControllerEnableHomekey();
-
 	/// <summary>Sets the offset of the controller's display position to its real position.</summary>
     /// <param name ="Controller">(In) (EPICOXRControllerType)Enum, the controller to set the origin offset for:
     /// <ul>

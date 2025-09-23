@@ -3615,6 +3615,43 @@ void UPICOEnterpriseFunctionLibrary::PE_UpdateRenderTargetFromRGB(const TArray<u
 	);
 }
 
+void UPICOEnterpriseFunctionLibrary::PE_UpdateRenderTargetFromRGBA(const TArray<uint8>& RawData, int32 Width, int32 Height, UTextureRenderTarget2D* RenderTarget2D)
+{
+	if (!RenderTarget2D || Width * Height * 4 != RawData.Num())
+	{
+		return;
+	}
+
+	EPixelFormat Format = RenderTarget2D->GetFormat();
+	if (RenderTarget2D->SizeX != Width || RenderTarget2D->SizeY != Height || Format != EPixelFormat::PF_R8G8B8A8)
+	{
+		RenderTarget2D->InitCustomFormat(Width, Height, EPixelFormat::PF_R8G8B8A8, false);
+		RenderTarget2D->UpdateResource();
+	}
+
+	int32 PixelNum = Width * Height;
+	TArray<uint8> TargetTextureData;
+	TargetTextureData.SetNum(PixelNum * 4);
+	FMemory::Memcpy(TargetTextureData.GetData(), RawData.GetData(), PixelNum * 4);
+
+	FRenderTarget* RenderTarget = RenderTarget2D->GameThread_GetRenderTargetResource();
+	ENQUEUE_RENDER_COMMAND(UpdateTextureRegionsData)(
+		[RenderTarget, Width, Height, TextureData = MoveTemp(TargetTextureData)](FRHICommandListImmediate& RHICmdList)
+		{
+			FUpdateTextureRegion2D Region = FUpdateTextureRegion2D(0, 0, 0, 0, Width, Height);
+			FTexture2DRHIRef TextureRHI = RenderTarget->GetRenderTargetTexture();
+			check(TextureRHI.IsValid());
+			RHIUpdateTexture2D(
+				TextureRHI,
+				0,
+				Region,
+				Width * 4,
+				TextureData.GetData()
+			);
+		}
+		);
+}
+
 void UPICOEnterpriseFunctionLibrary::PE_UpdateRenderTargetFromYUVNV21(const TArray<uint8>& RawData, int32 Width, int32 Height, UTextureRenderTarget2D* RenderTarget2D, uint8 OverrideAlpha)
 {
 	if (!RenderTarget2D || Width * Height * 3 / 2 != RawData.Num())
@@ -3671,6 +3708,224 @@ void UPICOEnterpriseFunctionLibrary::PE_UpdateRenderTargetFromYUVNV21(const TArr
 			);
 		}
 	);
+}
+
+bool UPICOEnterpriseFunctionLibrary::PE_CloseCamera()
+{
+#if PLATFORM_ANDROID
+	return FInterfaceWrapper::GetInstance()->pe_CloseCamera();
+#endif
+	return false;
+}
+
+int UPICOEnterpriseFunctionLibrary::CameraMode = 0;
+CameraFrame UPICOEnterpriseFunctionLibrary::CameraFrameBuffer = {};
+TArray<uint8> UPICOEnterpriseFunctionLibrary::CameraFrameBufferData = {};
+FPICOEnterpriseCameraBufferDelegate UPICOEnterpriseFunctionLibrary::CapturelibCallBackDelegate = {};
+bool UPICOEnterpriseFunctionLibrary::PE_OpenCameraAsync(int Mode, int Width, int Height, const TMap<FString, FString>& Options, const FPICOEnterpriseCameraBufferDelegate& Callback)
+{
+	CameraMode = Mode;
+	CameraFrameBuffer.width = Width;
+	CameraFrameBuffer.height = Height;
+	CameraFrameBuffer.size = Width * Height * 4; // RGBA format
+	CameraFrameBufferData.SetNumZeroed(CameraFrameBuffer.size);
+	CameraFrameBuffer.data = CameraFrameBufferData.GetData();
+#if PLATFORM_ANDROID
+	FInterfaceWrapper::GetInstance()->pe_SetCameraFrameBuffer(&CameraFrameBuffer);
+
+	CapturelibCallBackDelegate = Callback;
+	FInterfaceWrapper::GetInstance()->pe_SetCapturelibCallBack([](int result) {
+		AsyncTask(ENamedThreads::GameThread, [result]() {
+			UPICOEnterpriseFunctionLibrary::CapturelibCallBackDelegate.ExecuteIfBound(result, CameraFrameBufferData, CameraFrameBuffer.time);
+			if (result == 1)
+			{
+				FInterfaceWrapper::GetInstance()->pe_StartPerformance(CameraMode, CameraFrameBuffer.width, CameraFrameBuffer.height);
+			}
+			});
+		});
+
+	KeyValuePair* KeyValuePairs = new KeyValuePair[Options.Num()];
+	int32 i = 0;
+	for (const auto& Pair : Options)
+	{
+		KeyValuePairs[i].key = TCHAR_TO_UTF8(*Pair.Key);
+		KeyValuePairs[i].value = TCHAR_TO_UTF8(*Pair.Value);
+		++i;
+	}
+	bool Result = FInterfaceWrapper::GetInstance()->pe_OpenCameraAsync(KeyValuePairs, Options.Num());
+	delete[] KeyValuePairs;
+	return Result;
+#endif
+	return false;
+}
+
+void UPICOEnterpriseFunctionLibrary::PE_SetConfigureDefault()
+{
+#if PLATFORM_ANDROID
+	FInterfaceWrapper::GetInstance()->pe_SetConfigureDefault();
+#endif
+}
+
+void UPICOEnterpriseFunctionLibrary::PE_SetConfigure(bool enableMvHevc, int videoFps)
+{
+#if PLATFORM_ANDROID
+	FInterfaceWrapper::GetInstance()->pe_SetConfigure(enableMvHevc, videoFps);
+#endif
+}
+
+void UPICOEnterpriseFunctionLibrary::PE_SetConfigureMap(const TMap<FString, FString>& Options)
+{
+#if PLATFORM_ANDROID
+	KeyValuePair* KeyValuePairs = new KeyValuePair[Options.Num()];
+	int32 i = 0;
+	for (const auto& Pair : Options)
+	{
+		KeyValuePairs[i].key = TCHAR_TO_UTF8(*Pair.Key);
+		KeyValuePairs[i].value = TCHAR_TO_UTF8(*Pair.Value);
+		++i;
+	}
+	FInterfaceWrapper::GetInstance()->pe_SetConfigureMap(KeyValuePairs, Options.Num());
+	delete[] KeyValuePairs;
+#endif
+}
+
+bool UPICOEnterpriseFunctionLibrary::PE_GetCameraExtrinsics(TArray<float>& leftCameraExtrinsics, TArray<float>& rightCameraExtrinsics)
+{
+#if PLATFORM_ANDROID
+	double* leftExtrinsics_ptr = nullptr;
+	double* rightExtrinsics_ptr = nullptr;
+	int count_left = 0;
+	int count_right = 0;
+	if (FInterfaceWrapper::GetInstance()->pe_GetCameraExtrinsics(&count_left, &leftExtrinsics_ptr, &count_right, &rightExtrinsics_ptr))
+	{
+		leftCameraExtrinsics.SetNumZeroed(count_left);
+		rightCameraExtrinsics.SetNumZeroed(count_right);
+		FMemory::Memcpy(leftCameraExtrinsics.GetData(), leftExtrinsics_ptr, count_left * sizeof(double));
+		FMemory::Memcpy(rightCameraExtrinsics.GetData(), rightExtrinsics_ptr, count_right * sizeof(double));
+		return true;
+	}
+#endif
+	return false;
+}
+
+bool UPICOEnterpriseFunctionLibrary::PE_GetCameraIntrinsics(int width, int height, float h_fov, float v_fov, TArray<float>& rateArray)
+{
+#if PLATFORM_ANDROID
+	double* rateArray_ptr = nullptr;
+	int count = 0;
+	if (FInterfaceWrapper::GetInstance()->pe_GetCameraIntrinsics(width, height, h_fov, v_fov, &count, &rateArray_ptr))
+	{
+		rateArray.SetNumZeroed(count);
+		FMemory::Memcpy(rateArray.GetData(), rateArray_ptr, count * sizeof(double));
+		return true;
+	}
+#endif
+	return false;
+}
+
+int UPICOEnterpriseFunctionLibrary::PE_SetDeviceOwner(FString PackageName, FString ClassName)
+{
+	int Result = INT_MAX;
+#if PLATFORM_ANDROID
+	if (JNIEnv* Env = FAndroidApplication::GetJavaEnv())
+	{
+		auto jstring_PackageName = FJavaHelper::ToJavaString(Env, PackageName);
+		auto jstring_ClassName = FJavaHelper::ToJavaString(Env, ClassName);
+		static jmethodID Method = FJavaWrapper::FindMethod(Env, FJavaWrapper::GameActivityClassID, "SetDeviceOwner", "(Ljava/lang/String;Ljava/lang/String;)I", false);
+		Result = FJavaWrapper::CallIntMethod(Env, FJavaWrapper::GameActivityThis, Method, *jstring_PackageName, *jstring_ClassName);
+	}
+#endif
+	return Result;
+}
+
+FString UPICOEnterpriseFunctionLibrary::PE_GetDeviceOwner()
+{
+	FString Result = "";
+#if PLATFORM_ANDROID
+	if (JNIEnv* Env = FAndroidApplication::GetJavaEnv())
+	{
+		static jmethodID Method = FJavaWrapper::FindMethod(Env, FJavaWrapper::GameActivityClassID, "GetDeviceOwner", "()Ljava/lang/String;", false);
+		Result = FJavaHelper::FStringFromLocalRef(Env, (jstring)FJavaWrapper::CallObjectMethod(Env, FJavaWrapper::GameActivityThis, Method));
+	}
+#endif
+	return Result;
+}
+
+int UPICOEnterpriseFunctionLibrary::PE_SetBrowserHomePage(FString url)
+{
+	int Result = INT_MAX;
+#if PLATFORM_ANDROID
+	if (JNIEnv* Env = FAndroidApplication::GetJavaEnv())
+	{
+		auto jstring_url = FJavaHelper::ToJavaString(Env, url);
+		static jmethodID Method = FJavaWrapper::FindMethod(Env, FJavaWrapper::GameActivityClassID, "SetBrowserHomePage", "(Ljava/lang/String;)I", false);
+		Result = FJavaWrapper::CallIntMethod(Env, FJavaWrapper::GameActivityThis, Method, *jstring_url);
+	}
+#endif
+	return Result;
+}
+
+FString UPICOEnterpriseFunctionLibrary::PE_GetBrowserHomePage()
+{
+	FString Result = "";
+#if PLATFORM_ANDROID
+	if (JNIEnv* Env = FAndroidApplication::GetJavaEnv())
+	{
+		static jmethodID Method = FJavaWrapper::FindMethod(Env, FJavaWrapper::GameActivityClassID, "GetBrowserHomePage", "()Ljava/lang/String;", false);
+		Result = FJavaHelper::FStringFromLocalRef(Env, (jstring)FJavaWrapper::CallObjectMethod(Env, FJavaWrapper::GameActivityThis, Method));
+	}
+#endif
+	return Result;
+}
+
+FString UPICOEnterpriseFunctionLibrary::PE_SetMotionTrackerAutoStart(int enable)
+{
+	FString Result = "";
+#if PLATFORM_ANDROID
+	if (JNIEnv* Env = FAndroidApplication::GetJavaEnv())
+	{
+		static jmethodID Method = FJavaWrapper::FindMethod(Env, FJavaWrapper::GameActivityClassID, "SetMotionTrackerAutoStart", "(I)Ljava/lang/String;", false);
+		Result = FJavaHelper::FStringFromLocalRef(Env, (jstring)FJavaWrapper::CallObjectMethod(Env, FJavaWrapper::GameActivityThis, Method, enable));
+	}
+#endif
+	return Result;
+}
+
+int UPICOEnterpriseFunctionLibrary::PE_AllowWifiAutoJoin(FString ssid, FString password, int networkID, bool allowAutoJoin)
+{
+	int Result = INT_MAX;
+#if PLATFORM_ANDROID
+	if (JNIEnv* Env = FAndroidApplication::GetJavaEnv())
+	{
+		auto jstring_ssid = FJavaHelper::ToJavaString(Env, ssid);
+		auto jstring_password = FJavaHelper::ToJavaString(Env, password);
+		static jmethodID Method = FJavaWrapper::FindMethod(Env, FJavaWrapper::GameActivityClassID, "AllowWifiAutoJoin", "(Ljava/lang/String;Ljava/lang/String;IZ)I", false);
+		Result = FJavaWrapper::CallIntMethod(Env, FJavaWrapper::GameActivityThis, Method, *jstring_ssid, *jstring_password, networkID, allowAutoJoin);
+	}
+#endif
+	return Result;
+}
+
+TArray<FString> UPICOEnterpriseFunctionLibrary::PE_GetLargeSpaceBoundsInfoWithType()
+{
+	TArray<FString> Results;
+#if PLATFORM_ANDROID
+	if (JNIEnv* Env = FAndroidApplication::GetJavaEnv())
+	{
+		static jmethodID Method = FJavaWrapper::FindMethod(Env, FJavaWrapper::GameActivityClassID, "GetLargeSpaceBoundsInfoWithType", "()[Ljava/lang/String;", false);
+		jobjectArray JavaStringArray = (jobjectArray)FJavaWrapper::CallObjectMethod(Env, FJavaWrapper::GameActivityThis, Method);
+		jsize NumProducts = Env->GetArrayLength(JavaStringArray);
+		for (int32 Index = 0; Index < NumProducts; ++Index)
+		{
+			jstring Result = (jstring)(Env->GetObjectArrayElement(JavaStringArray, Index));
+			const char* JavaChars = Env->GetStringUTFChars(Result, 0);
+			Results.Add(FString(UTF8_TO_TCHAR(JavaChars)));
+			Env->ReleaseStringUTFChars(Result, JavaChars);
+			Env->DeleteLocalRef(Result);
+		}
+	}
+#endif
+	return Results;
 }
 
 #if PLATFORM_ANDROID
@@ -3853,14 +4108,10 @@ extern "C" JNIEXPORT void  JNICALL Java_com_epicgames_ue4_GameActivity_JavaToCSe
 
 extern "C" JNIEXPORT void  JNICALL Java_com_epicgames_ue4_GameActivity_JavaToCSwitchLargeSpaceSceneCallback(JNIEnv * env, jclass clazz, jboolean Result)
 {
-	if (Result == JNI_TRUE)
-	{
-		UPICOEnterpriseFunctionLibrary::EnableLargeSpaceDelegate.ExecuteIfBound(true);
-	}
-	else
-	{
-		UPICOEnterpriseFunctionLibrary::EnableLargeSpaceDelegate.ExecuteIfBound(false);
-	}
+	AsyncTask(ENamedThreads::GameThread, [Result]()
+		{
+			UPICOEnterpriseFunctionLibrary::EnableLargeSpaceDelegate.ExecuteIfBound(Result == JNI_TRUE);
+		});
 }
 
 extern "C" JNIEXPORT void  JNICALL Java_com_epicgames_ue4_GameActivity_JavaToCLargeSpaceStatusCallback(JNIEnv * env, jclass clazz, jstring Result)

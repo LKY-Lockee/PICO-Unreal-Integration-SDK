@@ -9,6 +9,10 @@
 #define PVRP_EXPORT typedef
 #include "PXR_EnterpriseInterface.h"
 #undef PVRP_EXPORT
+#if PLATFORM_ANDROID
+#include <jni.h>
+#endif
+#include "CameraAPI.h"
 
 struct FInterfaceWrapper
 {
@@ -33,6 +37,23 @@ private:
 	acquireVSTCameraFrame* PE_AcquireVSTCameraFrame_Interface;
 	acquireVSTCameraFrameAntiDistortion* PE_AcquireVSTCameraFrameAntiDistortion_Interface;
 	getCameraParameters* PE_GetCameraParameters_Interface;
+
+public:
+#if PLATFORM_ANDROID
+    setUEEnv* pe_SetJNIEnv;
+#endif
+	closeCamera* pe_CloseCamera;
+	openCameraAsync* pe_OpenCameraAsync;
+	setConfigureDefault* pe_SetConfigureDefault;
+	setConfigure* pe_SetConfigure;
+	setConfigureMap* pe_SetConfigureMap;
+	startPerformance* pe_StartPerformance;
+	startPreview* pe_StartPreview;
+	setCameraFrameBuffer* pe_SetCameraFrameBuffer;
+	setCapturelibCallBack* pe_SetCapturelibCallBack;
+	getCameraExtrinsics* pe_GetCameraExtrinsics;
+	getCameraIntrinsics* pe_GetCameraIntrinsics;
+	getCameraParametersNew* pe_GetCameraParametersNew;
 
 public:
 	static FInterfaceWrapper* GetInstance() { return &Wrapper; }

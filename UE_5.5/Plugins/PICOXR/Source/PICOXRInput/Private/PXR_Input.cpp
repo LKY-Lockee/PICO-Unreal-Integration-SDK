@@ -1406,10 +1406,10 @@ void FPICOXRInput::UpdateHandState()
 
 		
 			HandState.ReceivedJointPoses = static_cast<bool>(HandState.HandJointLocations.isActive);
+			HandState.Status = HandState.AimState.Status;
+			
 			if (HandState.ReceivedJointPoses)
 			{
-				HandState.Status = HandState.AimState.Status;
-
 				HandState.PinchStrengthIndex = HandState.AimState.pinchStrengthIndex;
 				HandState.PinchStrengthMiddle = HandState.AimState.pinchStrengthMiddle;
 				HandState.PinchStrengthRing = HandState.AimState.pinchStrengthRing;
@@ -1486,9 +1486,10 @@ void FPICOXRInput::UpdateHandState()
 		}
 		
 		HandState.ReceivedJointPoses = static_cast<bool>(HandState.HandJointLocations.isActive);
+		HandState.Status = HandState.AimState.Status;
+
 		if (HandState.ReceivedJointPoses)
 		{
-			HandState.Status = HandState.AimState.Status;
 			HandState.PinchStrengthIndex = HandState.AimState.pinchStrengthIndex;
 			HandState.PinchStrengthMiddle = HandState.AimState.pinchStrengthMiddle;
 			HandState.PinchStrengthRing = HandState.AimState.pinchStrengthRing;

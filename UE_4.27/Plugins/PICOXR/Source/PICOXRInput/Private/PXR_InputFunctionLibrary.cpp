@@ -283,16 +283,6 @@ int UPICOXRInputFunctionLibrary::PXR_GetHandedness(EPICOXRHandedness &Handedness
 	return result;
 }
 
-bool UPICOXRInputFunctionLibrary::PXR_GetControllerEnableHomekey()
-{
-    FPICOXRInput* PxrInput = GetPICOXRInput();
-    if (PxrInput)
-    {
-       return PxrInput->UPxr_GetControllerEnableHomeKey();
-    }
-    return false;
-}
-
 void UPICOXRInputFunctionLibrary::PXR_SetControllerOriginOffset(EPICOXRControllerType Controller, FVector Offset)
 {
     if (Controller == EPICOXRControllerType::LeftHand)

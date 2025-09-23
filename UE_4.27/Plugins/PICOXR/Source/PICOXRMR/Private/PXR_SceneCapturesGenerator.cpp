@@ -38,8 +38,14 @@ APICOXRSceneCapturesGenerator::APICOXRSceneCapturesGenerator():
 		{EPICOSemanticLabel::Curtain, {}},
 		{EPICOSemanticLabel::Cabinet, {}},
 		{EPICOSemanticLabel::Bed, {}},
+		{EPICOSemanticLabel::Plant, {}},
 		{EPICOSemanticLabel::Screen, {}},
 		{EPICOSemanticLabel::VirtualWall, {}},
+		{EPICOSemanticLabel::Refrigerator, {}},
+		{EPICOSemanticLabel::Washing_Machine, {}},
+		{EPICOSemanticLabel::Air_Conditioner, {}},
+		{EPICOSemanticLabel::Lamp, {}},
+		{EPICOSemanticLabel::Wall_Art, {}},
 	};
 }
 
@@ -141,6 +147,7 @@ void APICOXRSceneCapturesGenerator::SpawnSceneCaptures_Offline(const FPICOMRScen
 		case EPICOSemanticLabel::Door:
 		case EPICOSemanticLabel::Window:
 		case EPICOSemanticLabel::Opening:
+		case EPICOSemanticLabel::Wall_Art:
 		case EPICOSemanticLabel::VirtualWall:
 			{
 				FVector OriginScale=FVector(MRScene.Box2DInfo.Extent.Y*WorldToMetersScale,MRScene.Box2DInfo.Extent.X*WorldToMetersScale,WALL_WIDTH);
@@ -154,6 +161,11 @@ void APICOXRSceneCapturesGenerator::SpawnSceneCaptures_Offline(const FPICOMRScen
 		case EPICOSemanticLabel::Curtain:
 		case EPICOSemanticLabel::Cabinet:
 		case EPICOSemanticLabel::Bed:
+		case EPICOSemanticLabel::Plant:
+		case EPICOSemanticLabel::Refrigerator:
+		case EPICOSemanticLabel::Washing_Machine:
+		case EPICOSemanticLabel::Air_Conditioner:
+		case EPICOSemanticLabel::Lamp:
 		case EPICOSemanticLabel::Stairway:
 		case EPICOSemanticLabel::Screen:
 			{
