@@ -875,6 +875,17 @@ const void FPICOXRStereoLayer::SubmitLayer_RHIThread(const FGameSettings* Settin
 		layerProjection.header.layerId = PxrLayerID;
 		layerProjection.header.layerFlags = 0;
 		layerProjection.header.sensorFrameIndex = Frame->ViewNumber;
+
+		/*-------------------------------修改半透明问题-------------------------------------------------*/
+		layerProjection.header.useLayerBlend = 1;
+		PxrLayerBlend layerBlend = {};
+		layerBlend.srcAlpha = PxrBlendFactor::PXR_BLEND_FACTOR_ONE;
+		layerBlend.dstAlpha = PxrBlendFactor::PXR_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		layerBlend.srcColor = PxrBlendFactor::PXR_BLEND_FACTOR_ONE;
+		layerBlend.dstColor = PxrBlendFactor::PXR_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		layerProjection.header.layerBlend = layerBlend;
+		/*--------------------------------------------------------------------------------*/
+
 		if (!HMDDevice->bNeedDrawBlackEye)
 		{
 			FMemory::Memcpy(layerProjection.header.colorScale, ColorScale, sizeof(ColorScale));

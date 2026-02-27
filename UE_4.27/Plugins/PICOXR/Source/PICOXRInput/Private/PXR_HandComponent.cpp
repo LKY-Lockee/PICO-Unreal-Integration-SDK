@@ -5,16 +5,12 @@
 #include "PXR_HandComponent.h"
 #include <GameFramework/PlayerController.h>
 #include "PXR_HMDRuntimeSettings.h"
-#include "PXR_EventManager.h"
 #include "PXR_InputFunctionLibrary.h"
-#include "PXR_InputState.h"
 #include "Engine/SkeletalMesh.h"
 #include "Components/InputComponent.h"
 #include "Materials/MaterialInterface.h"
-#include "PXR_HMDFunctionLibrary.h"
 #include "Camera/PlayerCameraManager.h"
 #include "PXR_Input.h"
-#include "PXR_Log.h"
 
 UPICOXRHandComponent::UPICOXRHandComponent(const FObjectInitializer& ObjectInitializer) :
 	Super(ObjectInitializer),
@@ -42,15 +38,14 @@ void UPICOXRHandComponent::BeginPlay()
 		bCustomHandMesh = true;
 	}
 	//Hide Component if HandTracking is Disabled
-	const bool bStartHidden = UPICOXRInputFunctionLibrary::IsHandTrackingEnabled() ? false : true;
+	const bool bStartHidden = !(UPICOXRInputFunctionLibrary::IsHandTrackingEnabled());
 	SetHiddenInGame(bStartHidden, true);
 	UPICOXRSettings* HMDSettings = GetMutableDefault<UPICOXRSettings>();
 
 	if (HMDSettings)
 	{
-		bUpdateHandScale=HMDSettings->bAdaptiveHandModel;
+		bUpdateHandScale = HMDSettings->bAdaptiveHandModel;
 	}
-	
 }
 
 void UPICOXRHandComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -94,6 +89,7 @@ void UPICOXRHandComponent::TickComponent(float DeltaTime, enum ELevelTick TickTy
 		if (bHidden != bHiddenInGame)
 		{
 			SetHiddenInGame(bHidden, true);
+			OnHandVisibilityChanged.Broadcast(this, !bHidden);
 		}
 	}
 }
@@ -108,13 +104,13 @@ void UPICOXRHandComponent::UpdateBonePose()
 			if (BoneIndex >= 0)
 			{
 				FQuat BoneRotation = UPICOXRInputFunctionLibrary::GetBoneRotation(SkeletonType, BoneElem.Key);
-				if (!BoneRotation.IsIdentity()&&BoneRotation.IsNormalized())
+				if (!BoneRotation.IsIdentity() && BoneRotation.IsNormalized())
 				{
 					SetBoneRotationByName(BoneElem.Value, BoneRotation.Rotator(), EBoneSpaces::ComponentSpace);
 				}
 
 				const FVector BoneLocation = UPICOXRInputFunctionLibrary::GetBoneLocation(SkeletonType, BoneElem.Key);
-				if (!BoneLocation.IsZero()&&!BoneLocation.ContainsNaN()&&bApplyLocationToBones)
+				if (!BoneLocation.IsZero() && !BoneLocation.ContainsNaN() && bApplyLocationToBones)
 				{
 					SetBoneLocationByName(BoneElem.Value, BoneLocation, EBoneSpaces::WorldSpace);
 				}
